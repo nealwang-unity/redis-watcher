@@ -89,7 +89,27 @@ func NewWatcher(option WatcherOptions) (persist.Watcher, error) {
 	initConfig(&option)
 
 	var w *Watcher
-	if len(option.Addresses) > 1 {
+
+	if option.UseSentinel {
+		if option.MasterName == "" {
+			return nil, errors.New("redis: missing MasterName for Sentinel setup")
+		}
+
+		w = &Watcher{
+			subClient: rds.NewFailoverClient(&rds.FailoverOptions{
+				MasterName:    option.MasterName,
+				SentinelAddrs: option.Addresses,
+				PoolSize:      int(option.MaxConnections),
+			}),
+			pubClient: rds.NewFailoverClient(&rds.FailoverOptions{
+				MasterName:    option.MasterName,
+				SentinelAddrs: option.Addresses,
+				PoolSize:      int(option.MaxConnections),
+			}),
+			ctx:       context.Background(),
+			close:     make(chan struct{}),
+		}
+	} else if len(option.Addresses) > 1 {
 		w = &Watcher{
 			subClient: rds.NewClusterClient(&rds.ClusterOptions{
 				Addrs: option.Addresses,
