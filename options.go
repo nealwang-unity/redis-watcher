@@ -1,7 +1,7 @@
 package rediswatcher
 
 import (
-	rds "github.com/go-redis/redis/v8"
+	rds "github.com/go-redis/redis/v7"
 	"github.com/google/uuid"
 )
 

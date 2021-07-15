@@ -11,7 +11,7 @@ import (
 	"github.com/casbin/casbin/v2/model"
 
 	"github.com/casbin/casbin/v2/persist"
-	rds "github.com/go-redis/redis/v8"
+	rds "github.com/go-redis/redis/v7"
 )
 
 type Watcher struct {
@@ -63,10 +63,10 @@ func NewWatcher(addr string, option WatcherOptions) (persist.Watcher, error) {
 
 	w.initConfig(option)
 
-	if err := w.subClient.Ping(w.ctx).Err(); err != nil {
+	if err := w.subClient.Ping().Err(); err != nil {
 		return nil, err
 	}
-	if err := w.pubClient.Ping(w.ctx).Err(); err != nil {
+	if err := w.pubClient.Ping().Err(); err != nil {
 		return nil, err
 	}
 
@@ -134,7 +134,7 @@ func (w *Watcher) Update() error {
 	return w.logRecord(func() error {
 		w.l.Lock()
 		defer w.l.Unlock()
-		return w.pubClient.Publish(context.Background(), w.options.Channel, &MSG{"Update", w.options.LocalID, "", "", ""}).Err()
+		return w.pubClient.Publish(w.options.Channel, &MSG{"Update", w.options.LocalID, "", "", ""}).Err()
 	})
 }
 
@@ -144,7 +144,7 @@ func (w *Watcher) UpdateForAddPolicy(sec, ptype string, params ...string) error 
 	return w.logRecord(func() error {
 		w.l.Lock()
 		defer w.l.Unlock()
-		return w.pubClient.Publish(context.Background(), w.options.Channel, &MSG{"UpdateForAddPolicy", w.options.LocalID, sec, ptype, params}).Err()
+		return w.pubClient.Publish(w.options.Channel, &MSG{"UpdateForAddPolicy", w.options.LocalID, sec, ptype, params}).Err()
 	})
 }
 
@@ -154,7 +154,7 @@ func (w *Watcher) UpdateForRemovePolicy(sec, ptype string, params ...string) err
 	return w.logRecord(func() error {
 		w.l.Lock()
 		defer w.l.Unlock()
-		return w.pubClient.Publish(context.Background(), w.options.Channel, &MSG{"UpdateForRemovePolicy", w.options.LocalID, sec, ptype, params}).Err()
+		return w.pubClient.Publish(w.options.Channel, &MSG{"UpdateForRemovePolicy", w.options.LocalID, sec, ptype, params}).Err()
 	})
 }
 
@@ -164,7 +164,7 @@ func (w *Watcher) UpdateForRemoveFilteredPolicy(sec, ptype string, fieldIndex in
 	return w.logRecord(func() error {
 		w.l.Lock()
 		defer w.l.Unlock()
-		return w.pubClient.Publish(context.Background(), w.options.Channel,
+		return w.pubClient.Publish( w.options.Channel,
 			&MSG{"UpdateForRemoveFilteredPolicy", w.options.LocalID,
 				sec,
 				ptype,
@@ -180,7 +180,7 @@ func (w *Watcher) UpdateForSavePolicy(model model.Model) error {
 	return w.logRecord(func() error {
 		w.l.Lock()
 		defer w.l.Unlock()
-		return w.pubClient.Publish(context.Background(), w.options.Channel, &MSG{"UpdateForSavePolicy", w.options.LocalID, "", "", model}).Err()
+		return w.pubClient.Publish(w.options.Channel, &MSG{"UpdateForSavePolicy", w.options.LocalID, "", "", model}).Err()
 	})
 }
 
@@ -193,12 +193,12 @@ func (w *Watcher) logRecord(f func() error) error {
 }
 
 func (w *Watcher) unsubscribe(psc *rds.PubSub) error {
-	return psc.Unsubscribe(w.ctx)
+	return psc.Unsubscribe()
 }
 
 func (w *Watcher) subscribe() {
 	w.l.Lock()
-	sub := w.subClient.Subscribe(w.ctx, w.options.Channel)
+	sub := w.subClient.Subscribe(w.options.Channel)
 	w.l.Unlock()
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -242,5 +242,5 @@ func (w *Watcher) Close() {
 	w.l.Lock()
 	defer w.l.Unlock()
 	close(w.close)
-	w.pubClient.Publish(w.ctx, w.options.Channel, "Close")
+	w.pubClient.Publish(w.options.Channel, "Close")
 }
