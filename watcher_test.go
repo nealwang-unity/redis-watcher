@@ -13,7 +13,10 @@ import (
 )
 
 func initWatcher(t *testing.T) (*casbin.Enforcer, *Watcher) {
-	w, err := NewWatcher("127.0.0.1:6379", WatcherOptions{})
+	w, err := NewWatcher(WatcherOptions{
+		Addresses: []string {"127.0.0.1:6379"},
+		Namespace: "foo",
+	})
 	if err != nil {
 		t.Fatalf("Failed to connect to Redis: %v", err)
 	}
