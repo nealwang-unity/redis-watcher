@@ -1,14 +1,14 @@
 package rediswatcher
 
 import (
-	rds "github.com/go-redis/redis/v8"
+	rds "github.com/go-redis/redis/v7"
 	"github.com/google/uuid"
 )
 
 type WatcherOptions struct {
 	rds.Options
-	SubClient              *rds.Client
-	PubClient              *rds.Client
+	SubClient              *rds.ClusterClient
+	PubClient              *rds.ClusterClient
 	Channel                string
 	IgnoreSelf             bool
 	LocalID                string
