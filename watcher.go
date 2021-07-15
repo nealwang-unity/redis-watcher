@@ -3,8 +3,10 @@ package rediswatcher
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -67,21 +69,37 @@ func (m *MSG) UnmarshalBinary(data []byte) error {
 // 		Example:
 // 				w, err := rediswatcher.NewWatcher("127.0.0.1:6379",WatcherOptions{}, nil)
 //
-func NewWatcher(addrs []string, option WatcherOptions) (persist.Watcher, error) {
+func NewWatcher(option WatcherOptions) (persist.Watcher, error) {
+	if len(option.Addresses) == 0 || option.Addresses[0] == "" {
+		return nil, errors.New("redis: missing redis node address(es)")
+	}
+	if option.Namespace == "" {
+		return nil, errors.New("redis: missing key namespace")
+	}
+	if option.UseSentinel && option.MasterName == "" {
+		return nil, errors.New("redis: missing MasterName for Sentinel setup")
+	}
+
+	if option.MaxConnections == 0 {
+		// This is the exact same logic the redis client uses under the hood, but I wanted to
+		// make our copy of the connection count match theirs.
+		option.MaxConnections = uint(10 * runtime.NumCPU())
+	}
 
 	initConfig(&option)
 
 	var w *Watcher
-	if len(addrs) > 1 {
+	if len(option.Addresses) > 1 {
 		w = &Watcher{
 			subClient: rds.NewClusterClient(&rds.ClusterOptions{
-				Addrs: addrs,
+				Addrs: option.Addresses,
 				Password: option.Password,
-				// might need pool size
+				PoolSize: int(option.MaxConnections),
 			}),
 			pubClient: rds.NewClusterClient(&rds.ClusterOptions{
-				Addrs: addrs,
+				Addrs: option.Addresses,
 				Password: option.Password,
+				PoolSize: int(option.MaxConnections),
 			}),
 			ctx:       context.Background(),
 			close:     make(chan struct{}),
@@ -89,11 +107,11 @@ func NewWatcher(addrs []string, option WatcherOptions) (persist.Watcher, error) 
 	} else {
 		w = &Watcher{
 			subClient: rds.NewClient(&rds.Options{
-				Addr: addrs[0],
+				Addr: option.Addresses[0],
 				Password: option.Password,
 			}),
 			pubClient: rds.NewClient(&rds.Options{
-				Addr: addrs[0],
+				Addr: option.Addresses[0],
 				Password: option.Password,
 			}),
 			ctx:       context.Background(),

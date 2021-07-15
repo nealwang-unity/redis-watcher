@@ -12,6 +12,11 @@ type WatcherOptions struct {
 	Channel                string
 	IgnoreSelf             bool
 	LocalID                string
+	Addresses              []string
+	Namespace              string
+	MaxConnections         uint
+	UseSentinel            bool
+	MasterName             string
 	OptionalUpdateCallback func(string)
 }
 
